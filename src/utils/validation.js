@@ -4,6 +4,7 @@ export const registerSchema = z.object({
   email: z.string().email().max(255),
   password: z.string().min(8, 'Password must be at least 8 characters').max(128),
   fullName: z.string().min(2).max(100),
+  phone: z.string().max(20).default(''),
   role: z.enum(['student', 'tutor', 'both']).default('student'),
 });
 
@@ -42,6 +43,32 @@ export const bookingSchema = z.object({
 
 export const bookingStatusSchema = z.object({
   status: z.enum(['confirmed', 'declined', 'cancelled', 'completed']),
+});
+
+export const verifyEmailSchema = z.object({
+  token: z.string().min(10),
+});
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().email(),
+});
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(10),
+  newPassword: z.string().min(8).max(128),
+});
+
+export const reviewSchema = z.object({
+  bookingId: z.string().uuid(),
+  rating: z.number().int().min(1).max(5),
+  comment: z.string().max(1000).default(''),
+});
+
+export const mpesaInitiateSchema = z.object({
+  bookingId: z.string().uuid(),
+  phone: z
+    .string()
+    .regex(/^254\d{9}$/, 'Phone must be in 2547XXXXXXXX format'),
 });
 
 export function validate(schema) {
