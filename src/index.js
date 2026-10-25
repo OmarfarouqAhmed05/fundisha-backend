@@ -1,62 +1,28 @@
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import morgan from 'morgan';
-import rateLimit from 'express-rate-limit';
-import 'dotenv/config';
-import 'express-async-errors'; // must be imported before the routes that use it
+import { config } from './config.js';
+import { pool } from './db/pool.js';
+import { createApp } from './app.js';
 
-import authRoutes from './routes/auth.js';
-import tutorRoutes from './routes/tutors.js';
-import skillRoutes from './routes/skills.js';
-import bookingRoutes from './routes/bookings.js';
+const app = createApp();
 
-const app = express();
-const PORT = process.env.PORT || 4000;
-const ALLOWED_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:5173';
+// On Vercel the platform runs the exported app itself. Everywhere else we start our own server.
+if (!process.env.VERCEL) {
+  const server = app.listen(config.port, () => {
+    console.log(`Fundisha API listening on port ${config.port} (${config.env})`);
+    if (!config.resendApiKey) console.log('Email is off: set RESEND_API_KEY to send real emails.');
+    if (!config.mpesa.consumerKey) console.log('M-Pesa is off: set MPESA_CONSUMER_KEY and MPESA_CONSUMER_SECRET.');
+  });
 
-app.set('trust proxy', 1); // needed for correct rate-limiting behind a reverse proxy (Render/Railway/etc.)
-
-app.use(helmet());
-app.use(
-  cors({
-    origin: ALLOWED_ORIGIN,
-    credentials: true,
-  })
-);
-app.use(express.json({ limit: '100kb' })); // small cap — this API has no file uploads
-app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
-
-// Baseline rate limit across the whole API; auth routes have a stricter one of their own.
-app.use(
-  rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 300,
-    standardHeaders: true,
-    legacyHeaders: false,
-  })
-);
-
-app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
-
-app.use('/api/auth', authRoutes);
-app.use('/api/tutors', tutorRoutes);
-app.use('/api/skills', skillRoutes);
-app.use('/api/bookings', bookingRoutes);
-
-app.use((req, res) => {
-  res.status(404).json({ error: 'Not found' });
-});
-
-// Centralized error handler — never leak stack traces or raw DB errors to the client.
-app.use((err, req, res, _next) => {
-  console.error(err);
-  if (err.code === '23505') {
-    return res.status(409).json({ error: 'That record already exists' });
+  // Finish in-flight requests and release database connections when the host restarts us.
+  function shutdown(signal) {
+    console.log(`${signal} received, shutting down`);
+    server.close(async () => {
+      await pool.end().catch(() => {});
+      process.exit(0);
+    });
+    setTimeout(() => process.exit(1), 10000).unref();
   }
-  res.status(500).json({ error: 'Something went wrong on our end' });
-});
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
+}
 
-app.listen(PORT, () => {
-  console.log(`Fundisha API listening on port ${PORT}`);
-});
+export default app;

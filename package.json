@@ -1,21 +1,26 @@
 {
   "name": "fundisha-backend",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "version": "1.1.0",
+  "description": "Express + PostgreSQL API for Fundisha, a skills-tutoring marketplace",
+  "main": "src/index.js",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon src/index.js",
     "start": "node src/index.js",
-    "migrate": "psql $DATABASE_URL -f src/db/schema.sql",
-    "seed": "psql $DATABASE_URL -f src/db/seed.sql",
-    "migrate:features": "psql $DATABASE_URL -f src/db/migrations/002_features.sql"
+    "db:migrate": "node src/db/migrate.js",
+    "db:seed": "node src/db/seed.js",
+    "db:seed:demo": "node src/db/seed.js --demo",
+    "db:reset-demo": "node src/db/seed.js --reset-demo",
+    "db:setup": "node src/db/migrate.js && node src/db/seed.js --demo",
+    "migrate": "node src/db/migrate.js",
+    "seed": "node src/db/seed.js",
+    "test": "node --test --test-concurrency=1 test/*.test.js"
   },
   "keywords": [],
-  "author": "",
+  "author": "Omarfarouq Ahmed Hassan",
   "license": "ISC",
-  "type": "module",
   "dependencies": {
+    "@vercel/functions": "^3.10.3",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^18.0.3",
@@ -26,12 +31,16 @@
     "jsonwebtoken": "^9.0.3",
     "morgan": "^1.12.1",
     "pg": "^8.23.0",
-    "zod": "^4.6.5"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14"
+    "nodemon": "^3.1.14",
+    "supertest": "^7.1.4"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
+  },
+  "overrides": {
+    "zod": "$zod"
   }
 }
